@@ -22,6 +22,7 @@
 ;;; connect - connect to an endpoint
 (defun start-server ()
   "Start the server that listens on *server-get*."
+  (format t "~%Starting plan server get/put ~A/~A" *server-put* *server-get*)
   (sb-thread:make-thread
    (lambda ()
      (zmq:with-context (ctx)

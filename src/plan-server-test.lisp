@@ -20,13 +20,13 @@
   (ask-shop2 "(find-plans 'problem1 :verbose :plans)"))
 
 (defun try4 ()
-  (equal :bad-input (ask-shop2 '(/ 3 0))))
+  (equal :bad-input (ask-shop2 "(/ 3 0)")))
 
 (defvar *collected* nil)
 
 ;;; These are examples for clj.
 (defun test-server-put ()
-  "Test server by sending a request"
+  "Test server by sending 3 requests"
   (sb-thread:make-thread
    (lambda ()
      (sleep 10)
@@ -38,6 +38,7 @@
 	   (zmq:send sender (format nil "~S" x))))))))
 
 (defun test-server-get ()
+  "Test what comes back; should be strings of keys sent."
   (setf *collected* nil)
   (sb-thread:make-thread
    (lambda ()
@@ -54,4 +55,3 @@
   (start-server)
   (sleep 20)
   *collected*)
-
