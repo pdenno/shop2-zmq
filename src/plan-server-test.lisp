@@ -55,11 +55,33 @@
 		(log-msg "--->Test-client-read: ~A" got)
 		(push got *collected*))))))))
 
+(defun kill-server ()
+  "Kill the SHOP2-Server"
+  (let ((kt (find-if #'(lambda (x) (equal "SHOP2-Server" (sb-thread:thread-name x)))
+		     (sb-thread:list-all-threads)))
+	(hb (find-if #'(lambda (x) (equal "SHOP2-heartbeat" (sb-thread:thread-name x)))
+		     (sb-thread:list-all-threads))))
+    (when kt
+      (log-msg "Killing server ~A" kt)
+      (sb-thread:terminate-thread kt))
+    (when hb
+      (log-msg "Killing heartbeat ~A" hb)
+      (sb-thread:terminate-thread hb))))
+
+(defun diag-start-server-for-repl ()
+  "Start the server that listens on *endpoint*."
+  (format t "~%Starting plan server at ~A~%" *endpoint*)
+  (log-msg "======Starting server.")
+  (start-heart-beat)
+  (sb-thread:make-thread
+   (lambda () (server-loop))
+   :name "SHOP2-Server"))
+
 (defun run-server-test ()
   (setf *collected* nil)
   (setf *msgs* nil)  
   (kill-server)
-  (start-server)
+  (diag-start-server-for-repl)
   (test-client-write)
   (test-client-read)
   (sleep 10)

@@ -11,19 +11,6 @@
 	(eval form))
     (serious-condition () :bad-input)))
 
-(defun kill-server ()
-  "Kill the SHOP2-Server"
-  (let ((kt (find-if #'(lambda (x) (equal "SHOP2-Server" (sb-thread:thread-name x)))
-		     (sb-thread:list-all-threads)))
-	(hb (find-if #'(lambda (x) (equal "SHOP2-heartbeat" (sb-thread:thread-name x)))
-		     (sb-thread:list-all-threads))))
-    (when kt
-      (log-msg "Killing server ~A" kt)
-      (sb-thread:terminate-thread kt))
-    (when hb
-      (log-msg "Killing heartbeat ~A" hb)
-      (sb-thread:terminate-thread hb))))
-
 (defun log-msg (fmt &rest args)
   (let ((msg (apply #'format nil fmt args)))
     (multiple-value-bind
@@ -46,40 +33,16 @@
 
 (defvar *msgs* nil)
 
-;;; bind    - create an endpoint, accept connections on socket
-;;; connect - create out-going connection to an endpoint
-(defun start-server-old ()
-  "Start the server that listens on *endpoint*."
-  (format t "~%Starting plan server at ~A~%" *endpoint*)
-  (log-msg "======Starting server.")
-  (start-heart-beat)
-  (sb-thread:make-thread
-   (lambda ()
-     (handler-case
-	 (zmq:with-context (ctx)
-	   (log-msg "...context.")
-	   (zmq:with-socket (sock ctx :pull)
-	     (log-msg "...socket.")
-	     (zmq:bind sock *endpoint*)
-	     (log-msg "...bind.")
-	     (zmq:connect sock *endpoint*)
-	     (log-msg "Server bind and connect.")
-	     (loop
-		(let ((got (zmq:recv sock 100000))) ; block, waiting for input.
-		  (log-msg "Server receives: ~A" got)
-		  (let ((result (ask-shop2 got)))
-		    (log-msg "Server replying: ~A" result)
-		    (push result *msgs*) ; more diagnostics
-		    (zmq:send sock (format nil "'~S" result))))))) ; Note: quoted.
-       (condition (c)
-	 (log-msg "Server stopping: ~A" c))))
-   :name "SHOP2-Server"))
-
 (defun start-server ()
   "Start the server that listens on *endpoint*."
   (format t "~%Starting plan server at ~A~%" *endpoint*)
   (log-msg "======Starting server.")
   (start-heart-beat)
+  (server-loop))
+
+;;; bind    - create an endpoint, accept connections on socket
+;;; connect - create out-going connection to an endpoint
+(defun server-loop ()
   (handler-case
       (zmq:with-context (ctx)
 	(log-msg "...context.")
@@ -88,7 +51,7 @@
 	  (zmq:bind sock *endpoint*)
 	  (log-msg "...bind.")
 	  (zmq:connect sock *endpoint*)
-	  (log-msg "Server bind and connect.")
+	  (log-msg "...connect (listening).")
 	  (loop
 	     (let ((got (zmq:recv sock 100000))) ; block, waiting for input.
 	       (log-msg "Server receives: ~A" got)
@@ -98,5 +61,6 @@
 		 (zmq:send sock (format nil "'~S" result))))))) ; Note: quoted.
     (condition (c)
       (log-msg "Server stopping: ~A" c))))
+
 
 
