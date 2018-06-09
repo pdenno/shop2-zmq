@@ -22,36 +22,47 @@
 (defun try4 ()
   (equal :bad-input (ask-shop2 "(/ 3 0)")))
 
-(defvar *collected* nil)
-
 ;;; These are examples for clj.
-(defun test-server-put ()
+(defun test-client-write ()
   "Test server by sending 3 requests"
+  (log-msg "Test-client-write starting.")
   (sb-thread:make-thread
    (lambda ()
-     (sleep 10)
+     (sleep 5)
      (zmq:with-context (ctx)
-      (zmq:with-socket (sender ctx :push)
+      (zmq:with-socket (sock ctx :push)
       (loop for x in '(:hello :silly :world)
    	    do (sleep 1)
-                (zmq:connect sender *server-get*)
-	   (zmq:send sender (format nil "~S" x))))))))
+           (zmq:connect sock *endpoint*)
+	   (log-msg "Test-client-write: ~A" x)
+	   (zmq:send sock (format nil "~S" x))))))))
 
-(defun test-server-get ()
+(defvar *collected* nil)
+
+;;; bind    - create an endpoint, accept connections on socket
+;;; connect - create out-going connection to an endpoint
+(defun test-client-read ()
   "Test what comes back; should be strings of keys sent."
-  (setf *collected* nil)
+  (log-msg "Test-client-read starting.")
   (sb-thread:make-thread
    (lambda ()
      (sleep 10)
      (zmq:with-context (ctx)
-       (zmq:with-socket (receiver ctx :pull)
-        (zmq:connect receiver *server-put*)
+       (zmq:with-socket (sock ctx :pull)
+        (zmq:connect sock *endpoint*)
         (loop for i from 1 to 3
-	   do (push (zmq:recv receiver 100000) *collected*)))))))
+	   do (let ((got (zmq:recv sock 100000)))
+		(log-msg "--->Test-client-read: ~A" got)
+		(push got *collected*))))))))
 
 (defun run-server-test ()
-  (test-server-put)
-  (test-server-get)
+  (setf *collected* nil)
+  (setf *msgs* nil)  
+  (kill-server)
   (start-server)
-  (sleep 20)
+  (test-client-write)
+  (test-client-read)
+  (sleep 10)
+  (kill-server)
+  (format t "~% *colllected* = ~S~% *msgs* = ~S" *collected* *msgs*)
   *collected*)
