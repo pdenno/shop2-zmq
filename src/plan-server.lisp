@@ -60,10 +60,3 @@
 	(zmq:send sock ":Alive")
 	(sleep 120)))
    :name "SHOP2-heartbeat"))
-
-
-
-
-
-
-
