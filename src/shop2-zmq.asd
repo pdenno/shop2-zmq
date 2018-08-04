@@ -7,7 +7,7 @@
 ;;; That the ~/.config/common-lisp/source-registry.conf is messed up?
 (asdf:defsystem "shop2-zmq"
   :long-description "A server of UMd's SHOP2 planner using ZeroMQ"
-  :depends-on ("shop2" "zeromq" "pod-utils")
+  :depends-on ("shop2" "zeromq" "kif")
   :serial t
   :components ((:file "package")
 	       (:file "plan-server")))
