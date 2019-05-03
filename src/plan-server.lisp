@@ -8,7 +8,10 @@
       (let* ((*package* (find-package :shop2-user))
 	     (form (read-from-string request-str)))
 	(eval form))
-    (serious-condition () :bad-input)))
+    (serious-condition (e)
+      (format t "Serious condition: ~A" e)
+      (log-msg  "Serious condition: ~A" e)
+      :bad-input)))
 
 ;;; It seems to me that the meaning of bind and serve isn't accurately communicated in the documentation. 
 ;;; What really matters is the messaging pattern used. (e.g. :rep, :req, :pair).
@@ -60,3 +63,29 @@
 	(zmq:send sock ":Alive")
 	(sleep 120)))
    :name "SHOP2-heartbeat"))
+
+;;; ========================= Lisp as client ================================
+(defparameter *clj-endpoint* "tcp://127.0.0.1:31727")
+
+(defun wait-response (sock timeout)
+  "Return within timeout or return :timeout."
+  (let* ((ready? nil)
+	 (reader (sb-thread:make-thread
+		  (lambda ()
+		    (setf ready? (zmq:recv sock 100000))))) 
+	 (result (or (sb-ext:wait-for ready? :timeout timeout) :timeout)))
+    (when (sb-thread:thread-alive-p reader)
+      (sb-thread:terminate-thread result))
+    result))
+
+(defun ask-clojure (request-form)
+  (zmq:with-context (ctx)
+    (zmq:with-socket (sock ctx :req)
+      (zmq:connect sock *clj-endpoint*)
+      ;(zmq:send sock (zmq:make-msg :data (format nil "~S" request-form)))
+      (zmq:send sock (format nil "~S" request-form))
+      ;(make-instance 'zmq:msg :data (format nil "~S" request-form))
+      (let ((result (wait-response sock 5)))
+        (format t "~%Received: ~A " result)
+	(read-from-string (format nil "~A" result))))))
+
