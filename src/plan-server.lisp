@@ -65,7 +65,7 @@
    :name "SHOP2-heartbeat"))
 
 ;;; ========================= Lisp as client ================================
-(defparameter *clj-endpoint* "tcp://127.0.0.1:31727")
+(defparameter *clj-endpoint* "tcp://127.0.0.1:31728")
 
 (defun wait-response (sock timeout)
   "Return within timeout or return :timeout."
@@ -88,4 +88,19 @@
       (let ((result (wait-response sock 5)))
         (format t "~%Received: ~A " result)
 	(read-from-string (format nil "~A" result))))))
+
+;;; ========================================================================
+;;; Planlib helpers.
+(in-package :shop2-user)
+
+(defun query-test (&rest args)
+  (format t "~%*********** Query-test: args = ~A" args)
+  t)
+
+
+(defun query (&rest args)
+  (format t "~%*********** Query: args = ~A" args)
+  t)
+
+
 
